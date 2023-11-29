@@ -43,6 +43,9 @@
 #include <gtsam/nonlinear/Values.h>
 
 #include <gtsam/nonlinear/ISAM2.h>
+//추가
+
+//추가
 
 #include <iostream>
 #include <pcl/io/pcd_io.h>
@@ -253,8 +256,8 @@ public:
         pubRecentKeyFrames = nh.advertise<sensor_msgs::PointCloud2>("/recent_cloud", 2);
         pubRegisteredCloud = nh.advertise<sensor_msgs::PointCloud2>("/registered_cloud", 2);
 
-        downSizeFilterCorner.setLeafSize(0.2, 0.2, 0.2);
-        downSizeFilterSurf.setLeafSize(0.4, 0.4, 0.4);
+        downSizeFilterCorner.setLeafSize(0.05, 0.05, 0.05);
+        downSizeFilterSurf.setLeafSize(0.05, 0.05, 0.05);
         downSizeFilterOutlier.setLeafSize(0.4, 0.4, 0.4);
 
         downSizeFilterHistoryKeyFrames.setLeafSize(0.4, 0.4, 0.4); // for histor key frames of loop closure
@@ -769,86 +772,16 @@ public:
         downSizeFilterSurf.setInputCloud(surfaceMapCloud);
         downSizeFilterSurf.filter(*surfaceMapCloudDS);
 
-        pcl::io::savePCDFileASCII("/tmp/lego_loam/cornerMap.pcd", *cornerMapCloudDS);
-        pcl::io::savePCDFileASCII("/tmp/lego_loam/surfaceMap.pcd", *surfaceMapCloudDS);
-        pcl::io::savePCDFileASCII("/tmp/lego_loam/trajectory.pcd", *cloudKeyPoses3D);
+        // pcl::io::savePCDFileASCII("/home/ubuntu/catkin_ws/src/LeGO-LOAM/pcd/cornerMap.pcd", *cornerMapCloudDS);
+        // pcl::io::savePCDFileASCII("/home/ubuntu/catkin_ws/src/LeGO-LOAM/pcd/surfaceMap.pcd", *surfaceMapCloudDS);
+        // pcl::io::savePCDFileASCII("/home/ubuntu/catkin_ws/src/LeGO-LOAM/pcd/trajectory.pcd", *cloudKeyPoses3D);
 
     
         ROS_INFO("save");
         *globalMapCloud += *cornerMapCloudDS;
         *globalMapCloud += *surfaceMapCloudDS;
-        pcl::io::savePCDFileASCII("/tmp/lego_loam/finalCloud.pcd", *globalMapCloud);
+        pcl::io::savePCDFileASCII("/tmp/finalCloud.pcd", *globalMapCloud);
 
-
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-         // Load input PCD file
-        if (pcl::io::loadPCDFile<pcl::PointXYZ>("/tmp/lego_loam/cornerMap.pcd", *cloud) == -1) {
-            PCL_ERROR("Couldn't read input PCD file.\n");
-        }
-
-         // Apply Statistical Outlier Removal
-         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
-         pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-        sor.setInputCloud(cloud);
-        sor.setMeanK(130);  // Adjust these parameters as needed
-        sor.setStddevMulThresh(0.00001);
-        sor.filter(*cloud_filtered);
-
-        // Save the inlier PCD files
-        pcl::io::savePCDFile("/tmp/lego_loam/inlier.pcd", *cloud_filtered);
-
-        // Visualize the point clouds
-        pcl::visualization::PCLVisualizer viewer("PointCloud Visualization");
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-        colorize(*cloud, *colored_cloud, {255, 0, 0}); // Red for original
-        viewer.addPointCloud<pcl::PointXYZRGB>(colored_cloud, "original_cloud");
-        colorize(*cloud_filtered, *colored_cloud, {0, 255, 0}); // Green for filtered
-        viewer.addPointCloud<pcl::PointXYZRGB>(colored_cloud, "filtered_cloud");
-        while (!viewer.wasStopped()) {
-            viewer.spinOnce();
-        }
-
-        // 2D Projection of the inlier PCD
-        int width = 960, height = 840;
-        double scale_factor = 6.0; // Keep or adjust the scale factor as needed
-
-        cv::Mat projection_image(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-
-        int min_u = INT_MAX;
-        int max_u = INT_MIN;
-        int min_v = INT_MAX;
-        int max_v = INT_MIN;
-
-        // First, find the bounding box of the points to center them
-        for (const auto& point : cloud_filtered->points) {
-            int u = static_cast<int>(point.x * scale_factor);
-            int v = static_cast<int>(point.z * scale_factor);
-
-            if(u < min_u) min_u = u;
-            if(u > max_u) max_u = u;
-            if(v < min_v) min_v = v;
-            if(v > max_v) max_v = v;
-        }
-
-        // Calculate the offsets based on the bounding box
-        int u_offset = (width / 2) - ((min_u + max_u) / 2);
-        int v_offset = (height / 2) - ((min_v + max_v) / 2);
-
-        // Use the offsets to center the projection
-        for (const auto& point : cloud_filtered->points) {
-            int u = static_cast<int>(point.x * scale_factor + u_offset);
-            int v = static_cast<int>(point.z * scale_factor + v_offset);
-
-            if (u >= 0 && u < width && v >= 0 && v < height) {
-                projection_image.at<cv::Vec3b>(v, u) = cv::Vec3b(0, 0, 0);
-            }
-        }
-
-        cv::imwrite("/tmp/lego_loam/2d_projection_centered.jpg", projection_image);
-        cv::imshow("2D Projection", projection_image);
-        cv::waitKey(0);
-        
 
     }
 
