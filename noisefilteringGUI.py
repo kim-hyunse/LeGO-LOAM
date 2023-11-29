@@ -25,9 +25,9 @@ def run_p4():
 
 
 def generate_top_view_images():
-    pcd_files = ['/tmp/gachonstation_hdb.pcd',
-                 '/tmp/gachonstation_height.pcd',
-                 '/tmp/gachonstation_sor_final.pcd']
+    pcd_files = ['/tmp/converted_hdb.pcd',
+                 '/tmp/converted_height.pcd',
+                 '/tmp/converted_sor_final.pcd']
 
     # Create a frame to hold the images horizontally
     image_frame = tk.Frame(root)
@@ -67,19 +67,27 @@ def display_image(img, pcd_file, parent_frame):
     image.thumbnail((1000, 1000))  # Resize the image for display (adjust as needed)
     photo = ImageTk.PhotoImage(image)
 
-    # Create a label for the image
-    img_label = Label(parent_frame, image=photo)
-    img_label.image = photo  # Keep a reference to avoid garbage collection
-    img_label.pack(side=tk.LEFT)  # Display images side by side
+    # Create a frame for each image and its save button
+    frame = tk.Frame(parent_frame)
+    frame.pack(side=tk.LEFT)
 
+    # Create a label for the image
+    img_label = Label(frame, image=photo)
+    img_label.image = photo  # Keep a reference to avoid garbage collection
+    img_label.pack()
+
+    # Create a save button for the image
+    save_button = Button(frame, text="Save Image", command=lambda: save_selected_image(img, pcd_file))
+    save_button.pack()
 
 def save_selected_image(img, pcd_file):
     save_path = filedialog.asksaveasfilename(defaultextension=".jpg",
                                              filetypes=[("JPEG files", "*.jpg")])
     if save_path:
         # Convert the OpenCV image to a PIL image and save it
-        Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)).save(save_path)
+        Image.fromarray(img).save(save_path)
         selected_image_label.config(text=f"Selected Image Saved: {save_path}")
+
 
 # Create the main window
 root = tk.Tk()
